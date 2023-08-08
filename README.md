@@ -12,6 +12,8 @@ What it can do -
 
 Supported Commands-
 These are below supported intent that AI can handle, you can ask in natural language.
+
 Example- "What is the time now", "make me laugh", "click a photo", etc.
+
 
 You can check the prerequisie code used from JARVISAI in prerequisite.txt
