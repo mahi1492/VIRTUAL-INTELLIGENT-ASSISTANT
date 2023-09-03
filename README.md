@@ -15,3 +15,8 @@ Supported Commands-
 - Example- "What is the time now", "click a photo", "open spotify", "I want to text xyz person on whatsapp", "play the music video of a song on youtube", etc.
 
 You can check the prerequisie code used from JARVISAI in prerequisite.txt
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+(still in progress)
