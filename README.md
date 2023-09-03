@@ -12,6 +12,6 @@ What it can do -
 
 Supported Commands-
 - These are below supported intent that AI can handle, you can ask in natural language.
-- Example- "What is the time now", "click a photo", "open spotify", "I want to text xyz person on whatsapp" etc.
+- Example- "What is the time now", "click a photo", "open spotify", "I want to text xyz person on whatsapp", "play the music video of a song on youtube", etc.
 
 You can check the prerequisie code used from JARVISAI in prerequisite.txt
