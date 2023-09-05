@@ -1,165 +1,152 @@
-import JarvisAI
-import os
-import re
-import pprint
-import random
-import warnings
+import speech_recognition as sr
+import pyttsx3
 
-warnings.filterwarnings("ignore")
-warnings.warn("second example of warning!")
+import os 
+import datetime
+import webbrowser
+import pywhatkit as wk
+import pyautogui
+import sys
+import requests
 
-obj = JarvisAI.JarvisAssistant(sync=True, token='71dd94xsxsxse48471ec7af2a733acfb', disable_msg=False,
-                               load_chatbot_model=True, high_accuracy_chatbot_model=False,
-                               chatbot_large=True, backend_tts_api='pyttsx3')
+import openai
+from apikey import api_data
+openai.api_key = api_data
 
+#function to convert text to speech 
+def SpeakText(command) :
+    engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+    engine.setProperty(voices[0].id)
+    engine.setProperty('rate', 150)
+    engine.say(command)
+    engine.runAndWait()
 
-def t2s(text):
-    obj.text2speech(text)
+def wishMe() :
+    hour = int(datetime.datetime.now().hour)
+    if hour >= 0 and hour < 12 :
+        SpeakText('Good Morning!')
+    elif hour >= 12 and hour < 18 :
+        SpeakText('Good Afternoon!')
+    else :
+        SpeakText('Good Evening!')
 
+    SpeakText('Ready to comply. What can I do for you today?')
 
-def start():
-    while True:
-        print("Say your AI name to activate")
-        status, command = obj.hot_word_detect()
-        print(status, command)
-        if status:
-            while True:
-                # use any one of them
-                print("Continue listening, say- 'stop listening to stop continue listening'")
-                res = obj.mic_input()
-                # res = obj.mic_input_ai(debug=True)
-                res = res.lower()
-                print("You said: " + res)
+#initialize the recognizer 
+r = sr.Recognizer()
 
-                if re.search("jokes|joke|Jokes|Joke", res):
-                    joke_ = obj.tell_me_joke('en', 'neutral')
-                    print(joke_)
-                    t2s(joke_)
+#function to take user voice input
+def RecordText() :
+    #loop in case of errors
+    while(1) :
+        try :
+            #use the microphone as source for input 
+            with sr.Microphone() as source2 :
+                #prepare recognizer to receive input
+                r.adjust_for_ambient_noise(source2, duration=0.2)
+                print("I'm listening...")
+                r.pause_threshold = 0.5
+                #listens to the user for input 
+                audio2 = r.listen(source2)
+                #using google to recognize audio 
+                MyText = r.recognize_google(audio2, langauge="en-in")
 
-                elif re.search('setup|set up', res):
-                    setup = obj.setup()
-                    print(setup)
+                return MyText
 
-                elif re.search('google photos', res):
-                    photos = obj.show_google_photos()
-                    print(photos)
+        except sr.RequestError as e :
+            print("Could not request results: {0}".format(e))
 
-                elif re.search('local photos', res):
-                    photos = obj.show_me_my_images()
-                    print(photos)
+        except sr.UnknownValueError :
+            print("Unknown error occured")
 
-                elif re.search('weather|temperature', res):
-                    # city = res.split(' ')[-1]
-                    # weather_res = obj.weather(city=city)
-                    weather_res = obj.get_weather(res)
-                    print(weather_res)
-                    t2s(weather_res)
+def send_to_chatGPT(messages, model="gpt-3.5-turbo") :
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=messages,
+        max_tokens=100,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
 
-                elif re.search('news', res):
-                    news_res = obj.news()
-                    pprint.pprint(news_res)
-                    t2s(f"I have found {len(news_res)} news. You can read it. Let me tell you first 2 of them")
-                    t2s(news_res[0])
-                    t2s(news_res[1])
+    message = response.choices[0].message.content
+    messages.append(response.choices[0].message)
+    return message
 
-                elif re.search('tell me about', res):
-                    topic = res[14:]
-                    wiki_res = obj.tell_me(topic)
-                    print(wiki_res)
-                    t2s(wiki_res)
+if __name__ == '__main__' :
+    messages = []               #to keep track of the entire conversation
+    while(1) :
+        wishMe()
+        text = RecordText()
 
-                elif re.search('date', res):
-                    date = obj.tell_me_date()
-                    print(date)
-                    print(t2s(date))
+        # desktop assistant functions
+        if 'jarvis' in text :
+            print("Hello, I am Jarvis AI. How may I assist you?")
+            SpeakText("Hello, I am Jarvis A.I. How may I assist you?")
 
-                elif re.search('time', res):
-                    time = obj.tell_me_time()
-                    print(time)
-                    t2s(time)
+        elif 'just open google' in text :             
+                webbrowser.open('https://google.com')
 
-                elif re.search('open', res):
-                    domain = res.split(' ')[-1]
-                    open_result = obj.website_opener(domain)
-                    print(open_result)
+        elif 'just open youtube' in text :             
+            webbrowser.open('https://youtube.com')
 
-                elif re.search('launch', res):
-                    dict_app = {
-                        'chrome': 'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-                        'epic games': 'C:\Program Files (x86)\Epic Games\Launcher\Portal\Binaries\Win32\EpicGamesLauncher.exe'
-                    }
+        elif 'open youtube' in text :              
+            ("What would you like to watch?")
+            query = RecordText.lower()
+            wk.playonyt(f"{query}")
+                
+        elif 'search on youtube' in text :             
+            text = text.replace("search on youtube", "")
+            webbrowser.open("www.youtube.com/results?search_text={text}")
 
-                    app = res.split(' ', 1)[1]
-                    path = dict_app.get(app)
-                    if path is None:
-                        t2s('Application path not found')
-                        print('Application path not found')
-                    else:
-                        t2s('Launching: ' + app)
-                        obj.launch_any_app(path_of_app=path)
+        elif 'close browser' in text :             
+            os.system("taskfill /f /im chrome.exe")
 
-                elif re.search('hello|hi', res):
-                    print('Hi')
-                    t2s('Hi')
+        elif 'what is my ip address' in text :             
+            SpeakText("Checking")
+            try :
+                ipAdd = requests.get('https://api.ipify.org').text
+                print(ipAdd)
+                SpeakText("your IP address is")
+                SpeakText(ipAdd)
+            except Exception as e :
+                SpeakText("Network connection interrupted. Please try again later")
 
-                elif re.search('how are you', res):
-                    li = ['good', 'fine', 'great']
-                    response = random.choice(li)
-                    print(f"I am {response}")
-                    t2s(f"I am {response}")
+        elif 'volume up' in text :             
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
+            pyautogui.press("volumeup")
 
-                elif re.search('your name|who are you', res):
-                    print("I am your personal assistant")
-                    t2s("I am your personal assistant")
+        elif 'volume down' in text :             
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
+            pyautogui.press("volumedown")
 
-                elif re.search('what can you do', res):
-                    li_commands = {
-                        "open websites": "Example: 'open youtube.com",
-                        "time": "Example: 'what time it is?'",
-                        "date": "Example: 'what date it is?'",
-                        "launch applications": "Example: 'launch chrome'",
-                        "tell me": "Example: 'tell me about India'",
-                        "weather": "Example: 'what weather/temperature in Mumbai?'",
-                        "news": "Example: 'news for today' ",
-                    }
-                    ans = """I can do lots of things, for example you can ask me time, date, weather in your city,
-                    I can open websites for you, launch application and more. See the list of commands-"""
-                    print(ans)
-                    pprint.pprint(li_commands)
-                    t2s(ans)
-                elif re.search('tech news', res):
-                    obj.show_me_some_tech_news()
+        elif 'mute' or 'unmute' in text :             
+            pyautogui.press("volumemute")
 
-                elif re.search('tech videos', res):
-                    obj.show_me_some_tech_videos()
+        elif 'go to sleep' in text :
+            SpeakText("Alright then, I am switching off. Good bye.")
+            sys.exit()
 
-                elif re.search(r"^add *.+ list$", res):
-                    obj.create_new_list(res)
+        # search text via chatgpt
+        messages.append({'role': 'user', 'content' : text})
+        response = send_to_chatGPT(messages)
+        SpeakText(response)
+        print(response)
 
-                elif re.search(r"^show *.+ list$", res):
-                    obj.show_me_my_list()
-
-                elif re.search(r"^delete *.+ list$", res):
-                    obj.delete_particular_list(res)
-
-                elif re.search("stop listening|stop", res):
-                    break
-
-                else:
-                    chatbot_response = obj.chatbot_base(input_text=res)  # comment this line if you want to use chatbot large
-                    # chatbot_response = obj.chatbot_large(input_text=res) # uncomment this line to use large model for heavy/complex tasks
-
-                    print(chatbot_response)
-                    t2s(chatbot_response)
-        else:
-            continue
-
-
-if __name__ == "__main__":
-    if not os.path.exists("configs/config.ini"):
-        print(os.listdir())
-        res = obj.setup()
-        if res:
-            print("Settings Saved. Restart your Assistant")
-    else:
-        start()
